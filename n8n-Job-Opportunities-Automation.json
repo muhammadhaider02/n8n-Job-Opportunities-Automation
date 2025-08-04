@@ -1,0 +1,522 @@
+{
+  "name": "n8n-Job-Opportunities-Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "sender": "={{$env.JOBS_SENDER}}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1072,
+        80
+      ],
+      "id": "71b87363-7edf-4e16-af5a-b34ab1615041",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ce71f9d5-daf1-4c3e-ad3c-2025027d63ec",
+              "name": "rawText",
+              "value": "={{$json[\"text\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -912,
+        80
+      ],
+      "id": "c994a522-1c99-414c-8ab6-1d89d92ff996",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.cleanedText}}",
+        "options": {
+          "systemMessage": "You are an intelligent assistant that processes job and internship opportunity emails for a final-year student in Data Science or Computer Science.\n\nYour task is to:\n1. Determine if the opportunity is relevant to any of the following fields:\n   - AI Engineer\n   - Machine Learning Engineer\n   - Full Stack Developer\n   - Python Development\n   - Web Development\n   - Frontend Developer\n   - Backend Developer\n   - Flutter Developer\n   - Computer Vision Engineer\n   - Data Scientist\n   - Data Analyst\n   - ETL Engineer\n   - Any role related to Data Science, Software Engineering, or CS.\n\n2. If relevant, extract the following information:\n- IsRelevant: yes or no\n- Company: name of the company\n- Role/Title: job or internship title\n- Deadline: application deadline (or \"Not mentioned\")\n- Application Link: direct link to apply (if available)\n- Application Email: email address for applying (if mentioned)\n- Paid: \"Yes\" or \"No\"\n- Amount: stipend/salary if mentioned (else \"Not Mentioned\")\n- Work Arrangement: Remote, On-Site, Hybrid (or \"Not Mentioned)\n- Location: location if mentioned (else \"Not Mentioned\")\n\nBe concise and return all fields even if some are \"Not mentioned\" or \"NA\". The output should be in such a way that would the easiest for AI Agent to insert in google sheets. Start staight with whats needed without any unnecessary text in the output. If there are more than one opportunities, list each one after another giving all the fields for each oppoprtunity irrespective of if they are relevant flagged or irrelevant. \n\nThe output should be in the format\n[\n  { \"IsRelevant\": \"yes\", ... },\n  { \"IsRelevant\": \"no\", ... }\n]\n\nremove all the \\n and any other text such as 'json', 'output', and go straight for what is required"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        80
+      ],
+      "id": "cf336f28-8f06-429e-b1e7-0dc91ae6978e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        256
+      ],
+      "id": "6cc1bddb-4738-42b2-90c4-eb0a6afbf305",
+      "name": "DeepSeek Chat Model",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d7ede295-45c3-460c-b5f0-b7637efb89e3",
+              "leftValue": "={{$json[\"IsRelevant\"]}}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -144,
+        80
+      ],
+      "id": "eb5f571d-d1fb-4019-a29c-70ffdd870910",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{$env.JOBS_SHEET_ID}}",
+        "sheetName": "={{$env.JOBS_SHEET_GID_COMPUTING}}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ new Date().toLocaleString(\"en-GB\", {\n  day: '2-digit',\n  month: '2-digit',\n  year: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: false,\n  timeZone: 'Asia/Karachi'\n}).replace(',', '') }}\n",
+            "Company": "={{ $json[\"Company\"] }}",
+            "Role": "={{ $json[\"Role/Title\"] }}",
+            "Deadline": "={{ $json[\"Deadline\"] }}",
+            "Application Link": "={{ $json[\"Application Link\"] }}",
+            "Application Email": "={{ $json[\"Application Email\"] }}",
+            "Paid": "={{ $json[\"Paid\"] }}",
+            "Amount": "={{ $json[\"Amount\"] }}",
+            "Work Arrangement": "={{ $json[\"Work Arrangement\"] }}",
+            "Location": "={{ $json[\"Location\"] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Deadline",
+              "displayName": "Deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Application Link",
+              "displayName": "Application Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Application Email",
+              "displayName": "Application Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Paid",
+              "displayName": "Paid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Work Arrangement",
+              "displayName": "Work Arrangement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        16,
+        0
+      ],
+      "id": "64cc0b73-199a-4aa6-bb03-1d6302392efa",
+      "name": "Append row in Computing",
+      "retryOnFail": true,
+      "credentials": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{$env.JOBS_SHEET_ID}}",
+        "sheetName": "={{$env.JOBS_SHEET_GID_NONCOMPUTING}}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ new Date().toLocaleString(\"en-GB\", {\n  day: '2-digit',\n  month: '2-digit',\n  year: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: false,\n  timeZone: 'Asia/Karachi'\n}).replace(',', '') }}\n",
+            "Company": "={{ $json[\"Company\"] }}",
+            "Role": "={{ $json[\"Role/Title\"] }}",
+            "Deadline": "={{ $json[\"Deadline\"] }}",
+            "Application Link": "={{ $json[\"Application Link\"] }}",
+            "Application Email": "={{ $json[\"Application Email\"] }}",
+            "Paid": "={{ $json[\"Paid\"] }}",
+            "Amount": "={{ $json[\"Amount\"] }}",
+            "Work Arrangement": "={{ $json[\"Work Arrangement\"] }}",
+            "Location": "={{ $json[\"Location\"] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Deadline",
+              "displayName": "Deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Application Link",
+              "displayName": "Application Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Application Email",
+              "displayName": "Application Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Paid",
+              "displayName": "Paid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Work Arrangement",
+              "displayName": "Work Arrangement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        16,
+        160
+      ],
+      "id": "87d41479-8763-43c5-bfce-4d64036f9741",
+      "name": "Append row in NonComputing",
+      "retryOnFail": true,
+      "credentials": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json[\"rawText\"];\n\nconst cleaned = raw\n  .replace(/\\r?\\n|\\r/g, ' ')\n  .replace(/\\s+/g, ' ')\n  .replace(/(<([^>]+)>)/gi, '')\n  .replace(/\\*/g, '')\n  .trim();\n\nreturn [{ cleanedText: cleaned }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        80
+      ],
+      "id": "2ffe5360-d5c7-4739-a869-47b0f6b3d345",
+      "name": "Cleaning"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawOutput = items[0].json.output || items[0].json.text || '';\nconst cleaned = rawOutput\n  .replace(/^```json/, '')\n  .replace(/```$/, '')\n  .replace(/\\\\n/g, '')\n  .replace(/\\n/g, '')\n  .trim();\n\nconst parsed = JSON.parse(cleaned);\nreturn parsed.map(entry => ({ json: entry }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        80
+      ],
+      "id": "d28127f3-a10e-45c9-987d-2a6fd05c00fc",
+      "name": "JSON Split"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$env.JOBS_NOTIFY_TO}}",
+        "subject": "={{ $json[\"Role\"] || \"Unknown Role\" }} @ {{ $json[\"Company\"] || \"Unknown Company\" }}",
+        "message": "=A new opportunity has been added to the sheet.<br><br>\n<strong>Role:</strong> {{ $json[\"Role\"] }}<br>\n<strong>Company:</strong> {{ $json[\"Company\"] }}<br>\n<strong>Deadline:</strong> {{ $json[\"Deadline\"] }}<br>\n<a href=\"{{ $json[\"IsRelevant\"] === 'yes' ? ('https://docs.google.com/spreadsheets/d/' + $env.JOBS_SHEET_ID + '/edit?gid=' + $env.JOBS_SHEET_GID_COMPUTING) : ('https://docs.google.com/spreadsheets/d/' + $env.JOBS_SHEET_ID + '/edit?gid=' + $env.JOBS_SHEET_GID_NONCOMPUTING) }}\">📄 View Spreadsheet</a>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "2efa3cc0-cec4-47db-9db8-f76d83f0c2e0",
+      "name": "Send a message"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Cleaning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "JSON Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in Computing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in NonComputing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaning": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Split": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in Computing": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

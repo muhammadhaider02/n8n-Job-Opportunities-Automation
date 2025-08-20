@@ -7,7 +7,7 @@ An n8n workflow that reads job/internship emails, extracts structured details wi
 - Triggers on Gmail, cleans and parses messages, classifies relevance, writes to Google Sheets, and sends an email notification
 - Uses environment variables to avoid secrets and IDs in the workflow JSON
 - Exported without credentials or personal identifiers; inactive by default
-
+ 
 ### Required environment variables
 - `JOBS_SENDER`: Email address to filter incoming messages from
 - `JOBS_SHEET_ID`: Google Sheet ID (the long ID in the spreadsheet URL)
